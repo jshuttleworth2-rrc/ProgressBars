@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
@@ -34,6 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -65,8 +71,9 @@ class MainActivity : ComponentActivity() {
                         StyleExamples()
 
                         // Potential usage examples
-                        TimerProgressBar()
+                        TimerProgress()
                         ChecklistProgress()
+                        FundingProgress()
 
                         /* These are only 3 examples, there are many more times where you may want a progress bar.
                          *
@@ -107,7 +114,9 @@ fun DeterminateIndicator() {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
         Text(
             fontWeight = FontWeight.Bold,
@@ -138,7 +147,7 @@ fun DeterminateIndicator() {
         if (loading) {
             CircularProgressIndicator(
                 progress = { currentProgress },
-                modifier = Modifier.width(100.dp)
+                modifier = Modifier.size(100.dp)
             )
         }
     }
@@ -173,11 +182,13 @@ fun IndeterminateIndicator() {
     if (!loading) return
 
     LinearProgressIndicator(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     )
 
     CircularProgressIndicator(
-        modifier = Modifier.width(100.dp)
+        modifier = Modifier.size(100.dp)
     )
 }
 
@@ -186,11 +197,14 @@ fun StyleExamples() {
     var currentProgress by remember { mutableStateOf(0f) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope() // Create a coroutine scope
+    val starIcon = Icons.Default.Star
 
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
         Text(
             fontWeight = FontWeight.Bold,
@@ -219,7 +233,7 @@ fun StyleExamples() {
                 color = Color(0xFF4CAF50),
                 trackColor = Color(0xFF90EE90),
                 gapSize = 20.dp,
-                strokeCap = StrokeCap.Butt
+                strokeCap = StrokeCap.Butt,
             )
         }
 
@@ -247,7 +261,7 @@ fun StyleExamples() {
 }
 
 @Composable
-fun TimerProgressBar() {
+fun TimerProgress() {
     var timeInput by remember { mutableStateOf("") } // Get user input
     var currentProgress by remember { mutableStateOf(0f) }
     var timerRunning by remember { mutableStateOf(false) }
@@ -379,5 +393,103 @@ fun ChecklistProgress() {
             color = Color(0xFF2196F3),
             trackColor = Color(0xFFE0E0E0)
         )
+    }
+}
+
+@Composable
+fun FundingProgress() {
+    var currentFunding by remember { mutableStateOf(0f) }
+    var goalFunding = 1000f
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Give Me Funding",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "$0", fontSize = 16.sp)
+            Text(
+                text = "$${"%.0f".format(currentFunding)}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(text = "$1000", fontSize = 16.sp)
+        }
+
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Bar to track goal funding
+            LinearProgressIndicator(
+                progress = { (currentFunding/goalFunding).coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(20.dp),
+                color = Color(0xFF4CAF50),
+                trackColor = Color(0xFFE0E0E0)
+            )
+
+            // Track excess funding
+            if (currentFunding > goalFunding) {
+                LinearProgressIndicator(
+                    progress = { ((currentFunding-goalFunding) / goalFunding).coerceAtMost(1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .graphicsLayer( scaleX = -1f ),
+                    color = Color(0xFFFF9800),
+                    trackColor = Color.Transparent // Hide track, not needed if we don't exceed
+                )
+            }
+        }
+
+        if (currentFunding > goalFunding) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Goal Accomplished! Excess Funding: $${"%.0f".format(currentFunding - goalFunding)}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Get funding from users
+        var donateInput by remember { mutableStateOf("") }
+        OutlinedTextField(
+            value = donateInput,
+            onValueChange = { input ->
+                if (input.all { it.isDigit() }) {
+                    donateInput = input
+                }
+            },
+            label = { Text("How Much You Got?") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(0.8f)
+        )
+
+        Button(
+            onClick = {
+                val donation = donateInput.toFloatOrNull()
+                if (donation != null) {
+                    currentFunding += donation
+                    donateInput = ""
+                }
+        },
+            enabled = donateInput.isNotEmpty()
+        ) {
+            Text("Donate!")
+        }
     }
 }
